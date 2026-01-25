@@ -1,0 +1,44 @@
+---
+- name: Create the deploy user
+  ansible.builtin.user:
+    name: "{{ deploy_user | default('deploy') }}"
+    shell: /bin/bash
+    groups: sudo
+    state: present
+
+- name: Set password for deploy user from environment variable
+  ansible.builtin.user:
+    name: "{{ deploy_user | default('deploy') }}"
+    password: "{{ lookup('env', 'DEPLOY_USER_PASSWORD') | password_hash('sha512') }}"
+  no_log: true
+
+- name: Ensure deploy user uses a password for sudo
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers
+    state: present
+    regexp: "^{{ deploy_user | default('deploy') }} ALL=\\(ALL\\).*"
+    line: "{{ deploy_user | default('deploy') }} ALL=(ALL) ALL"
+    validate: visudo -cf %s
+
+- name: Create .ssh directory for deploy user
+  become: true
+  ansible.builtin.file:
+    path: "/home/{{ deploy_user | default('deploy') }}/.ssh"
+    state: directory
+    owner: "{{ deploy_user | default('deploy') }}"
+    group: "{{ deploy_user | default('deploy') }}"
+    mode: "0700"
+
+- name: Copy authorized SSH key to deploy user's home directory
+  ansible.builtin.copy:
+    remote_src: true
+    src: /root/.ssh/authorized_keys
+    dest: "/home/{{ deploy_user | default('deploy') }}/.ssh/authorized_keys"
+    owner: "{{ deploy_user | default('deploy') }}"
+    group: "{{ deploy_user | default('deploy') }}"
+    mode: "0600"
+
+- name: Remove authorized_keys file from root's SSH configuration
+  ansible.builtin.file:
+    path: /root/.ssh/authorized_keys
+    state: absent

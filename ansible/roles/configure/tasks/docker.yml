@@ -38,22 +38,14 @@
     enabled: true
     state: started
 
-- name: Add kamal user to docker group
+- name: Add deploy user to docker group
   ansible.builtin.user:
-    name: kamal
+    name: "{{ deploy_user | default('deploy') }}"
     groups: docker
     append: true
-
-- name: Ensure Docker is started and enabled
-  ansible.builtin.systemd:
-    name: docker
-    enabled: true
-    state: started
 
 - name: Restart Docker to apply changes
   ansible.builtin.systemd:
     name: docker
     state: restarted
     enabled: true
-
-# TODO: add robust config options such as custom data root, config.json, etc

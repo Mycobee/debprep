@@ -10,8 +10,8 @@ RUN apt-get update && \
 
 RUN eval "$(ssh-agent -s)"
 
-COPY . /kamabian
+COPY . /debprep
 
 SHELL ["/bin/bash", "-c"]
 
-WORKDIR /kamabian
+WORKDIR /debprep

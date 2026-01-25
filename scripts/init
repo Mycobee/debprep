@@ -4,6 +4,7 @@ set -e
 
 SERVER_IP=$1
 SSH_PRIVATE_KEY_PATH=$2
+DEPLOY_USER=${DEPLOY_USER:-deploy}
 WORKDIR=$(pwd)
 
 main() {
@@ -29,7 +30,7 @@ __check_cmd() {
 	fi
 
 	if [[ -z "$SERVER_IP" ]]; then
-		echo "Error: No server IP found in Terraform output"
+		echo "Error: No server IP provided."
 		exit 1
 	fi
 }
@@ -38,12 +39,15 @@ __generate_inventory() {
 	local inventory_file="${WORKDIR}/inventory.ini"
 	local template_file="${WORKDIR}/scripts/inventory_template.ini"
 
-	sed -e "s/{{ server_ip }}/$SERVER_IP/" -e "s|{{ ssh_key_path }}|$SSH_PRIVATE_KEY_PATH|" "$template_file" >"$inventory_file"
+	sed -e "s/{{ server_ip }}/$SERVER_IP/" \
+	    -e "s|{{ ssh_key_path }}|$SSH_PRIVATE_KEY_PATH|" \
+	    -e "s/{{ deploy_user }}/$DEPLOY_USER/" \
+	    "$template_file" >"$inventory_file"
 	echo "Inventory file generated at $inventory_file"
 }
 
 __init() {
-	ansible-playbook -i "${WORKDIR}/inventory.ini" "${WORKDIR}/ansible/playbooks/init.yml" -v -e ansible_user=root
+	ansible-playbook -i "${WORKDIR}/inventory.ini" "${WORKDIR}/ansible/playbooks/init.yml" -v -e ansible_user=root -e deploy_user=$DEPLOY_USER
 }
 
 main

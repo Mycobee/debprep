@@ -1,7 +1,11 @@
 #!/bin/bash
 
+DEPLOY_USER=${DEPLOY_USER:-deploy}
+
 main() {
-	ansible-playbook -i inventory.ini ansible/playbooks/configure.yml --extra-vars "ansible_become_password=${KAMAL_USER_PASSWORD}"
+	ansible-playbook -i inventory.ini ansible/playbooks/configure.yml \
+		--extra-vars "ansible_become_password=${DEPLOY_USER_PASSWORD}" \
+		--extra-vars "deploy_user=${DEPLOY_USER}"
 }
 
 main

@@ -1,64 +1,103 @@
-# Kamabian
+# debprep
 
-**Configure Ubuntu and Debian Systems for Kamal**
+**Sane defaults for Debian and Ubuntu web servers**
 
-`Kamabian` is a repository designed to configure a Debian (or Ubuntu) server with secure and sane defaults. It is designed to work alongside the open source tool [Kamal](https://kamal-deploy.org), for deploying containerized applications on your own server or VM.
+`debprep` configures a fresh Debian or Ubuntu server with secure, production-ready defaults. Run it once on a new VPS and you're ready to deploy.
 
-This repository handles the following.
+## What it does
 
-- Passwordless SSH
-- Fail2ban
-- Firewall (UFW) configuration (both UDP and TCP ports), with reasonable defaults and override possibility
-- Logrotate
-- Docker
+- Creates a deploy user with SSH key authentication (configurable name, defaults to `deploy`)
+- Disables root SSH login and password authentication
+- Installs and configures UFW firewall with sensible defaults
+- Sets up Fail2ban for brute-force protection
+- Enables automatic security updates (unattended-upgrades)
+- Configures log rotation
+- Installs Docker (optional)
 
-It creates a user named `kamal` for deploying your applications on your server.
+## Requirements
 
-## Setup
+1. A Debian or Ubuntu server with an IP address
+2. Root access via SSH (standard with most cloud providers)
+3. Docker on your local machine
 
-You must have the following things in place for this repository to work
-
-1. A server with an IP address
-2. Root access to the server via SSH (easily attained with most cloud providers)
-3. Docker on your host system
-
-## Usage
+## Quick Start
 
 ```bash
-$ docker pull kamabian/kamabian:latest
-$ docker run -v <path_to_your_priv_ssh_key>:/root/.ssh/privkey:ro \
-    -e KAMAL_USER_PASSWORD=<secure_password_of_your_choosing> \
-    -it kamabian/kamabian:latest \
-    /kamabian/scripts/bootstrap <your_server_ip>
+docker pull debprep/debprep:latest
+docker run -v ~/.ssh/id_ed25519:/root/.ssh/privkey:ro \
+    -e DEPLOY_USER_PASSWORD=<your_secure_password> \
+    -it debprep/debprep:latest \
+    /debprep/scripts/bootstrap <your_server_ip>
 ```
 
-That's it! Just replace the path to your SSH key, pick a secure password for your `kamal` user (don't lose it), and let `Kamabian` handle the rest.
+Replace `~/.ssh/id_ed25519` with your SSH private key path, choose a secure password, and provide your server's IP.
 
-#### Where is my SSH Key?!
+### Custom deploy user
 
-The point of this repo is to minimize the amount of DevOps you need to do, so if you don't know how to find the `<path_to_your_priv_ssh_key>` value, try this:
+To use a different username (e.g., `kamal` for Kamal deployments):
 
+```bash
+docker run -v ~/.ssh/id_ed25519:/root/.ssh/privkey:ro \
+    -e DEPLOY_USER_PASSWORD=<password> \
+    -e DEPLOY_USER=kamal \
+    -it debprep/debprep:latest \
+    /debprep/scripts/bootstrap <your_server_ip>
 ```
-echo "$HOME/.ssh/$(ls ~/.ssh | grep -E '^id_(rsa|ed25519)$')"
+
+### Finding your SSH key
+
+```bash
+echo "$HOME/.ssh/$(ls ~/.ssh | grep -E '^id_(rsa|ed25519)$' | head -1)"
 ```
 
-### Using with Kamal
+## Configuration
 
-To use this with Kamal, the only setting needed is
+Create a `vars.yml` file based on `vars.yml.example` and mount it:
+
+```bash
+docker run -v ~/.ssh/id_ed25519:/root/.ssh/privkey:ro \
+    -v ./vars.yml:/debprep/vars.yml:ro \
+    -e DEPLOY_USER_PASSWORD=<password> \
+    -it debprep/debprep:latest \
+    /debprep/scripts/bootstrap <your_server_ip>
+```
+
+### Available options
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `deploy_user` | `deploy` | Name of the deploy user to create |
+| `apt_packages` | `[]` | Additional apt packages to install |
+| `allowed_inbound_tcp_ports` | `[22, 80, 443]` | Inbound TCP ports to allow |
+| `allowed_outbound_tcp_ports` | `[80, 443, 587, 465]` | Outbound TCP ports to allow |
+| `allowed_inbound_udp_ports` | `[]` | Inbound UDP ports to allow |
+| `allowed_outbound_udp_ports` | `[53, 123]` | Outbound UDP ports (DNS, NTP) |
+| `skip_ufw_config` | `false` | Skip firewall configuration |
+| `install_docker` | `true` | Install Docker and add deploy user to docker group |
+
+## After setup
+
+SSH into your server with your deploy user:
+
+```bash
+ssh deploy@<your_server_ip>
+```
+
+If using with Kamal, set in your `deploy.yml`:
 
 ```yaml
 ssh:
-  user: kamal
+  user: deploy  # or whatever you set DEPLOY_USER to
 ```
-
-#### Overrides
-
-To override settings, create a `./vars.yml` file based on `vars.yml.example`, and mount it with the docker flag `-v ./vars.yml:/kamabian`. This will allow you to set things like desired apt packages, firewall configs, and more.
 
 ## Disclaimer
 
-This project is still in its early stages. If you plan to use this on your production systems, use scrutiny and caution. Your servers are **your** responsibility. Please submit issues and feature requests in this repository.
+This project configures servers with security in mind, but your servers are **your** responsibility. Review the playbooks before running on production systems.
 
 ## Contributing
 
-Open an issue before contributing and have a brief discussion with the author about whether or not your feature is in alignment with the author's wishes. If it does, then go ahead and open a PR.
+Open an issue before contributing to discuss whether your feature aligns with the project's goals.
+
+## License
+
+MIT

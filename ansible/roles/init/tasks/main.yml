@@ -1,6 +1,6 @@
 ---
-- name: Create user and set up SSH
-  ansible.builtin.import_tasks: kamal_user.yml
+- name: Create deploy user and set up SSH
+  ansible.builtin.import_tasks: deploy_user.yml
 
-- name: Configure ansible SSH
+- name: Configure SSH security
   ansible.builtin.import_tasks: ssh.yml

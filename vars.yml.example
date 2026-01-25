@@ -1,31 +1,45 @@
-# Add these to your vars.yml
+# debprep configuration
+# Copy this file to vars.yml and customize as needed
 
-# Desired apt packages
+# Deploy user name (default: deploy)
+# This user will be created with sudo access and SSH key authentication
+deploy_user: deploy
+
+# Additional apt packages to install
 apt_packages:
   - tree
   - curl
   - gnupg
 
-# set your firewall rules using the below vars
+# Firewall rules (UFW)
+# Inbound TCP ports to allow
 allowed_inbound_tcp_ports:
-  - 22
-  - 80
-  - 443
+  - 22    # SSH
+  - 80    # HTTP
+  - 443   # HTTPS
+
+# Outbound TCP ports to allow
 allowed_outbound_tcp_ports:
   - 80    # HTTP
   - 443   # HTTPS
   - 587   # SMTP (submission)
   - 465   # SMTP over SSL
+
+# Outbound UDP ports to allow
 allowed_outbound_udp_ports:
   - 53    # DNS
   - 123   # NTP
+
+# Inbound UDP ports to allow
 allowed_inbound_udp_ports:
-  - 443   # QUIC
+  - 443   # QUIC/HTTP3
 
-# To skip ALL ufw config (which renders above vars useless), set this var to true
-skip_ufw_config: false 
+# Skip firewall configuration entirely
+skip_ufw_config: false
 
-# this var can be used to skip docker install. You will need to manually add the deploy user of your choice to the docker group if you do this
-install_docker: false
+# Skip Docker installation
+# If false, you'll need to manually add your deploy user to the docker group
+install_docker: true
 
+# Python interpreter path
 ansible_python_interpreter: /usr/bin/python3
