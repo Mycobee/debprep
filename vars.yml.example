@@ -30,6 +30,3 @@ skip_ufw_config: false
 # Skip Docker installation
 # If false, you'll need to manually add your deploy user to the docker group
 install_docker: true
-
-# Python interpreter path
-ansible_python_interpreter: /usr/bin/python3

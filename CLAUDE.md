@@ -4,78 +4,84 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-debprep is a tool for configuring Debian/Ubuntu servers with secure, production-ready defaults. It runs Ansible playbooks via Docker to set up servers with:
-- A deploy user with passwordless SSH
-- Fail2ban for intrusion protection
-- UFW firewall with configurable rules
-- Automatic security updates
-- Log rotation
+debprep is an Ansible playbook for configuring Debian 12+ / Ubuntu servers with secure, reasonable defaults:
+- A deploy user with SSH key authentication and sudo (via the `sudo` group)
+- SSH hardening (no root, no passwords, no PAM password fallback)
+- UFW firewall (default-deny inbound, rate-limited SSH, allow-out)
+- Fail2ban for brute-force protection
+- Automatic security updates with auto-reboot when required
 - Docker (optional)
 
 ## Commands
 
-Build and run the Docker image:
+Install Ansible collection dependency (once):
+
 ```bash
-docker build -t debprep/debprep:latest .
-docker run -v <ssh_key_path>:/root/.ssh/privkey:ro \
-    -e DEPLOY_USER_PASSWORD=<password> \
-    -e DEPLOY_USER=deploy \
-    -it debprep/debprep:latest \
-    /debprep/scripts/bootstrap <server_ip>
+ansible-galaxy collection install -r requirements.yml
 ```
 
-Run individual scripts (from inside container or with ansible installed):
+Run against a fresh VPS:
+
 ```bash
-./scripts/init <server_ip> <ssh_key_path>   # Initial server setup as root
-./scripts/configure                          # Configure packages/security as deploy user
-./scripts/bootstrap <server_ip>              # Run both init and configure
+./debprep <server_ip> [extra ansible-playbook args]
 ```
 
-Run Ansible playbooks directly:
+The script runs `init.yml` then `configure.yml` using the caller's default SSH config. A 32-char `DEPLOY_USER_PASSWORD` is generated if not set in env.
+
+Run playbooks directly (inventory is inline — note the trailing comma):
+
 ```bash
-ansible-playbook -i inventory.ini ansible/playbooks/init.yml -e ansible_user=root -e deploy_user=deploy
-ansible-playbook -i inventory.ini ansible/playbooks/configure.yml --extra-vars "ansible_become_password=${DEPLOY_USER_PASSWORD}" --extra-vars "deploy_user=deploy"
+ansible-playbook -i "<ip>," ansible/playbooks/init.yml \
+    -e "deploy_user=deploy" -e "ansible_become_password=<password>"
+
+ansible-playbook -i "<ip>," ansible/playbooks/configure.yml \
+    -e "deploy_user=deploy" -e "ansible_become_password=<password>"
 ```
 
 ## Architecture
 
 ```
 debprep/
-├── scripts/
-│   ├── bootstrap              # Main entry point: runs init then configure
-│   ├── init                   # Generates inventory, runs init playbook as root
-│   ├── configure              # Runs configure playbook as deploy user
-│   └── inventory_template.ini # Template for dynamic inventory generation
+├── debprep                    # Entrypoint: inline inventory, runs init then configure
 ├── ansible/
 │   ├── playbooks/
-│   │   ├── init.yml           # Creates deploy user, configures SSH
-│   │   └── configure.yml      # Installs packages, security, firewall, Docker
+│   │   ├── init.yml           # Two plays: create user as root → verify + harden SSH as deploy
+│   │   └── configure.yml      # Packages, security, firewall, Docker
 │   └── roles/
-│       ├── init/tasks/
-│       │   ├── deploy_user.yml  # Create deploy user with sudo
-│       │   └── ssh.yml          # SSH hardening (disable root, passwords)
-│       └── configure/tasks/
-│           ├── security.yml     # Fail2ban, unattended upgrades, logrotate
-│           ├── firewall.yml     # UFW rules
-│           ├── apt_packages.yml # Package installation
-│           └── docker.yml       # Docker installation
-├── vars.yml.example           # Override defaults (mount at /debprep/vars.yml)
-├── Dockerfile                 # Debian-based container with Ansible
-└── TODO.md                    # Project roadmap (not checked in)
+│       ├── init/
+│       │   ├── handlers/main.yml   # Restart sshd handler
+│       │   └── tasks/
+│       │       ├── deploy_user.yml # Create deploy user + authorized_keys
+│       │       └── ssh.yml         # Write /etc/ssh/sshd_config.d/99-debprep.conf
+│       └── configure/
+│           ├── handlers/main.yml   # Restart fail2ban handler
+│           ├── tasks/
+│           │   ├── main.yml
+│           │   ├── apt_packages.yml
+│           │   ├── security.yml    # unattended-upgrades + fail2ban + timesyncd
+│           │   ├── firewall.yml    # UFW: deny-in, allow-out, rate-limit SSH
+│           │   └── docker.yml
+│           └── templates/
+│               └── jail.local.j2
+├── requirements.yml           # community.general collection
+├── vars.yml.example           # Reference doc for overrideable vars
+├── ansible.cfg
+├── README.md
+└── LICENSE
 ```
 
 ## Key Variables
 
-- `DEPLOY_USER` - Environment variable, name of deploy user (default: `deploy`)
-- `DEPLOY_USER_PASSWORD` - Environment variable, password for the deploy user
-- `deploy_user` - Ansible variable, same as above but used in playbooks
+- `DEPLOY_USER` — env var; name of deploy user (default: `deploy`)
+- `DEPLOY_USER_PASSWORD` — env var; sudo password for the new deploy user. Generated by `./debprep` if unset.
+- `deploy_user` — Ansible var, same value. Used in playbooks/tasks.
 
 ## Configuration
 
-Override defaults by mounting a `vars.yml` file (see `vars.yml.example`):
-- `deploy_user` - Name of the deploy user to create
-- `apt_packages` - Additional apt packages to install
-- `allowed_inbound_tcp_ports`, `allowed_outbound_tcp_ports` - Firewall TCP rules
-- `allowed_inbound_udp_ports`, `allowed_outbound_udp_ports` - Firewall UDP rules
-- `skip_ufw_config` - Skip firewall setup entirely
-- `install_docker` - Set to false to skip Docker installation
+Callers supply vars via `-e @file.yml` passed through `./debprep`; see `vars.yml.example` for overrideable keys. There is no required `vars.yml` — defaults in the tasks are the shipped behavior.
+
+## Safety notes
+
+Init has a lockout guard: the second play verifies the deploy user can connect (and sudo) before removing root's `authorized_keys`. If anything fails earlier, root SSH still works and the operator can recover.
+
+The SSH hardening drop-in is validated with `sshd -t -f %s` before the file is moved into place, and restart is handler-driven so a failed validation never restarts sshd.
