@@ -1,6 +1,25 @@
 ---
-- name: Configure the system users and SSH config
+- name: Create deploy user
   hosts: all
   remote_user: root
-  roles:
-    - init
+  tasks:
+    - ansible.builtin.import_role:
+        name: init
+        tasks_from: deploy_user
+
+- name: Verify deploy user, then harden SSH
+  hosts: all
+  remote_user: "{{ deploy_user | default('deploy') }}"
+  become: true
+  pre_tasks:
+    - name: Verify we can connect as deploy user
+      ansible.builtin.ping:
+  tasks:
+    - ansible.builtin.import_role:
+        name: init
+        tasks_from: ssh
+  post_tasks:
+    - name: Remove root's authorized_keys (last step — only after SSH hardening succeeded)
+      ansible.builtin.file:
+        path: /root/.ssh/authorized_keys
+        state: absent

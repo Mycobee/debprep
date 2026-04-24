@@ -37,8 +37,3 @@
     owner: "{{ deploy_user | default('deploy') }}"
     group: "{{ deploy_user | default('deploy') }}"
     mode: "0600"
-
-- name: Remove authorized_keys file from root's SSH configuration
-  ansible.builtin.file:
-    path: /root/.ssh/authorized_keys
-    state: absent
