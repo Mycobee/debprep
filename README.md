@@ -87,4 +87,4 @@ Open an issue before contributing to discuss whether your feature aligns with th
 
 ## License
 
-MIT
+GPL-3.0 — see [LICENSE](LICENSE).
