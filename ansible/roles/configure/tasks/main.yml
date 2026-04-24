@@ -4,11 +4,11 @@
 
 - name: Setup firewall
   ansible.builtin.import_tasks: firewall.yml
-  when: skip_ufw_config is not defined or not skip_ufw_config
+  when: not (skip_ufw_config | default(false) | bool)
 
 - name: Install apt packages
   ansible.builtin.import_tasks: apt_packages.yml
 
 - name: Setup docker
   ansible.builtin.import_tasks: docker.yml
-  when: (install_docker is defined and install_docker) or (install_docker is not defined)
+  when: install_docker | default(true) | bool
