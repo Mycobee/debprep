@@ -43,9 +43,3 @@
     name: "{{ deploy_user | default('deploy') }}"
     groups: docker
     append: true
-
-- name: Restart Docker to apply changes
-  ansible.builtin.systemd:
-    name: docker
-    state: restarted
-    enabled: true
