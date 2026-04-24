@@ -1,8 +1,8 @@
 # debprep
 
-**Sane defaults for Debian and Ubuntu web servers**
+**Reasonable defaults for Debian and Ubuntu servers**
 
-`debprep` configures a fresh Debian or Ubuntu server with secure, production-ready defaults. Run it once on a new VPS and you're ready to deploy.
+`debprep` is an Ansible playbook that configures a fresh Debian or Ubuntu server with secure, production-ready defaults. Run it once on a new VPS and you're ready to deploy.
 
 ## What it does
 
@@ -18,16 +18,19 @@
 
 1. A Debian or Ubuntu server with an IP address
 2. Root access via SSH (standard with most cloud providers)
-3. Docker on your local machine
+3. Ansible on your local machine
+
+Install Ansible collection dependencies once:
+
+```bash
+ansible-galaxy collection install -r requirements.yml
+```
 
 ## Quick Start
 
 ```bash
-docker pull debprep/debprep:latest
-docker run -v ~/.ssh/id_ed25519:/root/.ssh/privkey:ro \
-    -e DEPLOY_USER_PASSWORD=<your_secure_password> \
-    -it debprep/debprep:latest \
-    /debprep/scripts/bootstrap <your_server_ip>
+DEPLOY_USER_PASSWORD=<your_secure_password> \
+    ./scripts/bootstrap <your_server_ip> ~/.ssh/id_ed25519
 ```
 
 Replace `~/.ssh/id_ed25519` with your SSH private key path, choose a secure password, and provide your server's IP.
@@ -37,30 +40,14 @@ Replace `~/.ssh/id_ed25519` with your SSH private key path, choose a secure pass
 To use a different username (e.g., `kamal` for Kamal deployments):
 
 ```bash
-docker run -v ~/.ssh/id_ed25519:/root/.ssh/privkey:ro \
-    -e DEPLOY_USER_PASSWORD=<password> \
-    -e DEPLOY_USER=kamal \
-    -it debprep/debprep:latest \
-    /debprep/scripts/bootstrap <your_server_ip>
-```
-
-### Finding your SSH key
-
-```bash
-echo "$HOME/.ssh/$(ls ~/.ssh | grep -E '^id_(rsa|ed25519)$' | head -1)"
+DEPLOY_USER=kamal \
+DEPLOY_USER_PASSWORD=<password> \
+    ./scripts/bootstrap <your_server_ip> ~/.ssh/id_ed25519
 ```
 
 ## Configuration
 
-Create a `vars.yml` file based on `vars.yml.example` and mount it:
-
-```bash
-docker run -v ~/.ssh/id_ed25519:/root/.ssh/privkey:ro \
-    -v ./vars.yml:/debprep/vars.yml:ro \
-    -e DEPLOY_USER_PASSWORD=<password> \
-    -it debprep/debprep:latest \
-    /debprep/scripts/bootstrap <your_server_ip>
-```
+Create a `vars.yml` file based on `vars.yml.example` in the repo root — `scripts/configure` picks it up automatically if present.
 
 ### Available options
 

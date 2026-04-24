@@ -1,15 +1,13 @@
 #!/bin/bash
+set -euo pipefail
 
-SERVER_IP=$1
-if [ -f /.dockerenv ]; then
-  SSH_PRIVATE_KEY_PATH=/root/.ssh/privkey
-else
-  SSH_PRIVATE_KEY_PATH=$2
+SERVER_IP=${1:-}
+SSH_PRIVATE_KEY_PATH=${2:-}
+
+if [[ -z "$SERVER_IP" || -z "$SSH_PRIVATE_KEY_PATH" ]]; then
+	echo "Usage: $0 <server_ip> <ssh_private_key_path>" >&2
+	exit 1
 fi
 
-main() {
-  ./scripts/init $SERVER_IP $SSH_PRIVATE_KEY_PATH
-  ./scripts/configure
-}
-
-main
+./scripts/init "$SERVER_IP" "$SSH_PRIVATE_KEY_PATH"
+./scripts/configure
