@@ -14,10 +14,17 @@
 
 - name: Set default policy for outgoing traffic
   community.general.ufw:
-    default: deny
+    default: allow
     direction: outgoing
     state: enabled
     logging: true
+
+- name: Rate-limit SSH
+  community.general.ufw:
+    rule: limit
+    port: "{{ ssh_port | default(22) }}"
+    proto: tcp
+    direction: in
 
 - name: Allow inbound traffic for specified TCP ports
   community.general.ufw:
@@ -25,23 +32,7 @@
     port: "{{ item }}"
     proto: tcp
     direction: in
-  loop: "{{ allowed_inbound_tcp_ports | default([22, 80, 443]) }}"
-
-- name: Allow outbound traffic for specified TCP ports
-  community.general.ufw:
-    rule: allow
-    port: "{{ item }}"
-    proto: tcp
-    direction: out
-  loop: "{{ allowed_outbound_tcp_ports | default([80, 443]) }}"
-
-- name: Allow outbound traffic for specified UDP ports
-  community.general.ufw:
-    rule: allow
-    port: "{{ item }}"
-    proto: udp
-    direction: out
-  loop: "{{ allowed_outbound_udp_ports | default([53, 123]) }}"
+  loop: "{{ allowed_inbound_tcp_ports | default([80, 443]) }}"
 
 - name: Allow specified inbound UDP ports if defined
   community.general.ufw:
