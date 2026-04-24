@@ -5,19 +5,21 @@
     state: present
     update_cache: true
 
-- name: Configure unattended-upgrades
+- name: Enable daily apt updates and unattended-upgrades
   ansible.builtin.copy:
-    src: ./templates/unattended-upgrades.j2
-    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
     owner: root
     group: root
     mode: "0644"
 
-- name: Enable automatic upgrades
-  ansible.builtin.lineinfile:
-    path: /etc/apt/apt.conf.d/20auto-upgrades
-    line: APT::Periodic::Unattended-Upgrade "1";
-    create: true
+- name: Enable auto-reboot for unattended-upgrades
+  ansible.builtin.copy:
+    content: |
+      Unattended-Upgrade::Automatic-Reboot "true";
+    dest: /etc/apt/apt.conf.d/51-debprep-reboot
     owner: root
     group: root
     mode: "0644"
@@ -35,6 +37,7 @@
     owner: root
     group: root
     mode: "0644"
+  notify: Restart fail2ban
 
 - name: Ensure fail2ban is running and enabled
   ansible.builtin.service:
@@ -53,52 +56,3 @@
     name: systemd-timesyncd
     state: started
     enabled: true
-
-- name: Check NTP status
-  ansible.builtin.command: timedatectl status
-  register: ntp_status
-  changed_when: false
-
-- name: Install auditd
-  ansible.builtin.apt:
-    name: auditd
-    state: present
-    update_cache: true
-
-- name: Ensure auditd is running and enabled
-  ansible.builtin.service:
-    name: auditd
-    state: started
-    enabled: true
-
-- name: Install logrotate
-  ansible.builtin.package:
-    name: logrotate
-    state: present
-
-- name: Configure logrotate with defaults
-  ansible.builtin.template:
-    src: logrotate.conf.j2
-    dest: /etc/logrotate.conf
-    owner: root
-    group: root
-    mode: "0644"
-
-- name: Configure log rotation for system logs
-  ansible.builtin.copy:
-    dest: /etc/logrotate.d/syslog
-    content: |
-      /var/log/syslog {
-          weekly
-          rotate 4
-          compress
-          missingok
-          notifempty
-          create 0640 root adm
-      }
-    owner: root
-    group: root
-    mode: "0644"
-
-# TODO: Rework this file as a series of tasks, with environment variable overrides to install them
-# TODO: Seperate logging in to its own file, and configure logwatch and SMTP if desired
