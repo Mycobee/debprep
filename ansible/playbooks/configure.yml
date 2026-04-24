@@ -1,6 +1,7 @@
 ---
 - name: Configure base packages and operating system
-  hosts: servers
+  hosts: all
+  remote_user: "{{ deploy_user | default('deploy') }}"
   become: true
   roles:
     - configure
