@@ -1,17 +1,13 @@
 ---
-- name: Disable password authentication via SSH
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: ^PasswordAuthentication
-    line: PasswordAuthentication no
-
-- name: Disable root login via SSH
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: ^PermitRootLogin
-    line: PermitRootLogin no
-
-- name: Ensure SSH service is restarted
-  ansible.builtin.service:
-    name: ssh
-    state: restarted
+- name: Write hardened SSH config drop-in
+  ansible.builtin.copy:
+    content: |
+      PermitRootLogin no
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+    dest: /etc/ssh/sshd_config.d/99-debprep.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: "sshd -t -f %s"
+  notify: Restart sshd
