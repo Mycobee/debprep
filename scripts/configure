@@ -1,11 +1,18 @@
 #!/bin/bash
+set -e
 
 DEPLOY_USER=${DEPLOY_USER:-deploy}
 
 main() {
+	if [[ -z "$VARS_FILE" ]]; then
+		echo "Error: VARS_FILE is required"
+		exit 1
+	fi
+
 	ansible-playbook -i inventory.ini ansible/playbooks/configure.yml \
 		--extra-vars "ansible_become_password=${DEPLOY_USER_PASSWORD}" \
-		--extra-vars "deploy_user=${DEPLOY_USER}"
+		--extra-vars "deploy_user=${DEPLOY_USER}" \
+		--extra-vars "@${VARS_FILE}"
 }
 
 main

@@ -1,7 +1,4 @@
 ---
-- name: Check and load vars file
-  ansible.builtin.import_tasks: check_vars.yml
-
 - name: Setup system security
   ansible.builtin.import_tasks: security.yml
 
