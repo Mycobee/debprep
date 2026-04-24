@@ -26,7 +26,7 @@ Run against a fresh VPS:
 ./debprep <server_ip> [extra ansible-playbook args]
 ```
 
-The script runs `init.yml` then `configure.yml` using the caller's default SSH config. A 32-char `DEPLOY_USER_PASSWORD` is generated if not set in env.
+The script runs `init.yml` then `configure.yml` using the caller's default SSH config. `DEPLOY_USER_PASSWORD` is required in the environment — the script errors out if unset. Callers should inject it from a secret manager (1Password CLI, Doppler, Vault, shell export), not from a file on disk.
 
 Run playbooks directly (inventory is inline — note the trailing comma):
 

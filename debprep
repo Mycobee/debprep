@@ -8,9 +8,13 @@ Usage: $0 <server_ip> [extra ansible-playbook args...]
 Uses your default SSH configuration (~/.ssh/config, ssh-agent).
 If \`ssh root@<server_ip>\` works for you, so does this.
 
-Environment:
+Required environment:
+  DEPLOY_USER_PASSWORD   Sudo password for the new deploy user. Inject from
+                         your secret manager (1Password CLI, Doppler, Vault,
+                         shell export, etc.) — not a file on disk.
+
+Optional environment:
   DEPLOY_USER            Name of deploy user to create (default: deploy)
-  DEPLOY_USER_PASSWORD   Password for new deploy user (default: 32-char random)
 EOF
 	exit 1
 }
@@ -22,11 +26,11 @@ shift
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
 DEPLOY_USER=${DEPLOY_USER:-deploy}
+
 if [[ -z "${DEPLOY_USER_PASSWORD:-}" ]]; then
-	DEPLOY_USER_PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)
-	GENERATED_PASSWORD=1
+	echo "Error: DEPLOY_USER_PASSWORD is required in the environment" >&2
+	exit 1
 fi
-export DEPLOY_USER_PASSWORD
 
 # Skip SSH host-key verification: a brand-new VPS has no prior known_hosts entry,
 # so there's nothing to verify against and the default prompt would block automation.
@@ -43,9 +47,3 @@ ansible-playbook "${common_args[@]}" ansible/playbooks/init.yml "$@"
 
 echo "==> configure playbook"
 ansible-playbook "${common_args[@]}" ansible/playbooks/configure.yml "$@"
-
-if [[ -n "${GENERATED_PASSWORD:-}" ]]; then
-	echo
-	echo "==> Generated deploy user password (save this now):"
-	echo "    ${DEPLOY_USER_PASSWORD}"
-fi

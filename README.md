@@ -27,27 +27,13 @@ ansible-galaxy collection install -r requirements.yml
 
 ## Quick Start
 
-```bash
-./debprep <your_server_ip>
-```
-
-That's it. Uses your default SSH configuration (`~/.ssh/config`, ssh-agent) — if `ssh root@<ip>` works, so does this.
-
-A 32-character password is generated for the new deploy user and printed at the end. Save it somewhere secure.
-
-### Custom deploy user
-
-To use a different username (e.g., `kamal` for Kamal deployments):
+`DEPLOY_USER_PASSWORD` must be set in the environment — inject it from your secret manager (1Password CLI, Doppler, Vault, your shell's exported env, etc.). Don't hardcode it in a file.
 
 ```bash
-DEPLOY_USER=kamal ./debprep <your_server_ip>
+DEPLOY_USER_PASSWORD=<from-your-secret-source> ./debprep <your_server_ip>
 ```
 
-### Supply your own deploy user password
-
-```bash
-DEPLOY_USER_PASSWORD=<secure_password> ./debprep <your_server_ip>
-```
+Uses your default SSH configuration (`~/.ssh/config`, ssh-agent) — if `ssh root@<ip>` works, so does this.
 
 ## Configuration
 
@@ -75,13 +61,6 @@ SSH into your server with your deploy user:
 
 ```bash
 ssh deploy@<your_server_ip>
-```
-
-If using with Kamal, set in your `deploy.yml`:
-
-```yaml
-ssh:
-  user: deploy  # or whatever you set DEPLOY_USER to
 ```
 
 ## Disclaimer
